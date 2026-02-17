@@ -1,0 +1,241 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NEMOS</title>
+    <link rel="icon" type="image/png" href="{% static 'core/favicon-rounded.png' %}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: {
+                950: "#05070d",
+              },
+              accent: {
+                50: "#eef2ff",
+                100: "#e0e7ff",
+                200: "#c7d2fe",
+                300: "#a5b4fc",
+                400: "#818cf8",
+                500: "#6366f1",
+                600: "#4f46e5",
+                700: "#4338ca",
+                800: "#3730a3",
+                900: "#312e81",
+              },
+            },
+            boxShadow: {
+              soft: "0 1px 0 rgba(15,23,42,.06), 0 12px 32px rgba(2,6,23,.08)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html,
+      body {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      html::-webkit-scrollbar,
+      body::-webkit-scrollbar {
+        display: none;
+      }
+
+      input[type="checkbox"] {
+        accent-color: #60a5fa;
+      }
+
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-[radial-gradient(1200px_circle_at_20%_-10%,theme(colors.accent.100),transparent_60%),radial-gradient(900px_circle_at_100%_0%,theme(colors.slate.100),transparent_55%),linear-gradient(to_bottom,theme(colors.white),theme(colors.slate.50))] text-slate-900 antialiased selection:bg-accent-200 selection:text-ink-950">
+    {% if not request.resolver_match or request.resolver_match.app_name != 'accounts' or request.resolver_match.url_name != 'login' %}
+      <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+          <div class="flex items-center gap-3">
+            <a href="{% url 'ngo:activity_list' %}" class="flex items-center gap-2">
+              <span class="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl shadow-soft">
+                <img src="{% static 'core/logo-v2.png' %}" alt="NEMOS logo" class="h-8 w-8 object-contain" />
+              </span>
+              <span class="text-sm font-semibold tracking-wide text-slate-900">NEMOS</span>
+            </a>
+            <nav class="hidden items-center gap-1 sm:flex">
+              {% if user.is_staff %}
+                <a href="{% url 'ngo:admin_activity_manage' %}" class="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-900/5 hover:text-slate-900">
+                  Manage Activities
+                </a>
+                <a href="{% url 'ngo:admin_ngo_manage' %}" class="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-900/5 hover:text-slate-900">
+                  Manage NGOs
+                </a>
+                <a href="{% url 'registrations:admin_monitor' %}" class="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-900/5 hover:text-slate-900">
+                  Monitor
+                </a>
+                <a href="{% url 'notifications:admin_notifications' %}" class="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-900/5 hover:text-slate-900">
+                  Notifications
+                </a>
+              {% endif %}
+            </nav>
+          </div>
+
+          <div class="flex items-center gap-2">
+            {% if user.is_authenticated %}
+              <span class="hidden text-sm text-slate-600 sm:inline">Signed in as <span class="font-medium text-slate-900">{{ user.username }}</span></span>
+              <a href="{% url 'accounts:logout' %}" class="rounded-full bg-ink-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+                Log Out
+              </a>
+            {% else %}
+              <a href="{% url 'accounts:login' %}" class="rounded-full bg-ink-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+                Login
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </header>
+    {% endif %}
+
+    <main class="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
+      {% if messages %}
+        <div class="mb-8 space-y-3">
+          {% for message in messages %}
+            <div class="rounded-2xl border px-4 py-3 text-sm shadow-soft
+              {% if message.tags == 'success' %}
+                border-emerald-200 bg-emerald-50 text-emerald-900
+              {% elif message.tags == 'error' %}
+                border-rose-200 bg-rose-50 text-rose-900
+              {% elif message.tags == 'warning' %}
+                border-amber-200 bg-amber-50 text-amber-900
+              {% else %}
+                border-slate-200/80 bg-white/80 text-slate-800
+              {% endif %}
+            ">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+    <script>
+      (function () {
+        const selects = Array.from(
+          document.querySelectorAll("select:not([multiple]):not([data-native-select])")
+        );
+        if (!selects.length) return;
+
+        const wrappers = [];
+        const esc = (value) => {
+          if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+          return String(value).replace(/["\\]/g, "\\$&");
+        };
+
+        const closeAll = () => {
+          wrappers.forEach((wrapper) => {
+            const menu = wrapper.querySelector("[data-curved-menu]");
+            if (menu) menu.classList.add("hidden");
+          });
+        };
+
+        const buildOptionButton = (option, select, label, menu) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "block w-full px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+          button.textContent = option.text;
+          button.dataset.value = option.value;
+          button.disabled = option.disabled;
+          if (option.selected) button.classList.add("bg-slate-100");
+
+          button.addEventListener("click", () => {
+            if (option.disabled) return;
+            select.value = option.value;
+            label.textContent = option.text;
+            menu.querySelectorAll("button").forEach((item) => item.classList.remove("bg-slate-100"));
+            button.classList.add("bg-slate-100");
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            menu.classList.add("hidden");
+          });
+
+          return button;
+        };
+
+        selects.forEach((select) => {
+          if (select.dataset.curvedInit === "1") return;
+          if ((select.size && select.size > 1) || select.disabled) return;
+
+          const wrapper = document.createElement("div");
+          wrapper.className = "relative";
+
+          const trigger = document.createElement("button");
+          trigger.type = "button";
+          trigger.dataset.curvedTrigger = "1";
+          trigger.className =
+            (select.className || "") +
+            " flex items-center justify-between text-left focus:outline-none";
+
+          const label = document.createElement("span");
+          const selectedOption = select.options[select.selectedIndex] || select.options[0];
+          label.textContent = selectedOption ? selectedOption.text : "";
+          label.className = "truncate pr-2";
+
+          const chevron = document.createElement("span");
+          chevron.textContent = "▾";
+          chevron.className = "shrink-0 text-slate-500";
+
+          trigger.appendChild(label);
+          trigger.appendChild(chevron);
+
+          const menu = document.createElement("div");
+          menu.dataset.curvedMenu = "1";
+          menu.className =
+            "absolute left-0 right-0 z-30 mt-2 hidden max-h-64 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-soft";
+
+          Array.from(select.options).forEach((option) => {
+            menu.appendChild(buildOptionButton(option, select, label, menu));
+          });
+
+          trigger.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const shouldOpen = menu.classList.contains("hidden");
+            closeAll();
+            if (shouldOpen) menu.classList.remove("hidden");
+          });
+
+          select.addEventListener("change", () => {
+            const current = select.options[select.selectedIndex];
+            label.textContent = current ? current.text : "";
+            menu.querySelectorAll("button").forEach((item) => item.classList.remove("bg-slate-100"));
+            const active = menu.querySelector(`button[data-value="${esc(select.value)}"]`);
+            if (active) active.classList.add("bg-slate-100");
+          });
+
+          select.dataset.curvedInit = "1";
+          select.classList.add("hidden");
+
+          select.parentNode.insertBefore(wrapper, select);
+          wrapper.appendChild(select);
+          wrapper.appendChild(trigger);
+          wrapper.appendChild(menu);
+          wrappers.push(wrapper);
+        });
+
+        document.addEventListener("click", (event) => {
+          if (!event.target.closest("[data-curved-trigger]")) closeAll();
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,90 @@
+﻿{% extends "core/base.html" %}
+
+{% block content %}
+  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-8 shadow-soft backdrop-blur-xl">
+    <div class="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-accent-200/70 blur-3xl"></div>
+    <div class="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-slate-100 blur-3xl"></div>
+    <div class="relative">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Admin</p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight">Notifications</h1>
+      <p class="mt-2 max-w-3xl text-sm/6 text-slate-600">Prototype controls for schedules and broadcasts (no real sending yet).</p>
+    </div>
+  </div>
+
+  <div class="mt-6 grid gap-6 lg:grid-cols-12">
+    <section class="lg:col-span-5">
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl">
+        <h2 class="text-base font-semibold tracking-tight">Schedule reminders</h2>
+        <p class="mt-1 text-sm text-slate-600">Choose an activity and reminder intervals.</p>
+
+        <form method="post" action="{% url 'notifications:schedule' %}" class="mt-4 space-y-4">
+          {% csrf_token %}
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Activity</label>
+            <select name="activity_id" required class="mt-1 w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm shadow-sm focus:border-ink-950 focus:ring-2 focus:ring-slate-200">
+              <option value="" disabled selected>Select an activity</option>
+              {% for a in activities %}
+                <option value="{{ a.id }}">{{ a.ngo.name }} - {{ a.service_type }} - {{ a.service_date|date:"Y-m-d H:i" }}</option>
+              {% empty %}
+                <option value="" disabled selected>No activities available</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <p class="text-sm font-medium text-slate-700">Intervals (days before cutoff)</p>
+            <div class="mt-2 grid gap-2 sm:grid-cols-3">
+              <label class="flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 px-3 py-3 text-sm">
+                <input type="checkbox" name="intervals" value="7" class="h-4 w-4 rounded border-slate-300 text-accent-500 focus:ring-accent-300" />
+                <span>7 days</span>
+              </label>
+              <label class="flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 px-3 py-3 text-sm">
+                <input type="checkbox" name="intervals" value="3" class="h-4 w-4 rounded border-slate-300 text-accent-500 focus:ring-accent-300" />
+                <span>3 days</span>
+              </label>
+              <label class="flex items-center gap-2 rounded-2xl border border-slate-200/70 bg-white/60 px-3 py-3 text-sm">
+                <input type="checkbox" name="intervals" value="1" class="h-4 w-4 rounded border-slate-300 text-accent-500 focus:ring-accent-300" />
+                <span>1 day</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+            Save schedule
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="lg:col-span-7">
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl">
+        <h2 class="text-base font-semibold tracking-tight">Broadcast message</h2>
+        <p class="mt-1 text-sm text-slate-600">Send a message to an audience (prototype only).</p>
+
+        <form method="post" action="{% url 'notifications:broadcast' %}" class="mt-4 space-y-4">
+          {% csrf_token %}
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Audience</label>
+            <select name="audience" required class="mt-1 w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm shadow-sm focus:border-ink-950 focus:ring-2 focus:ring-slate-200">
+              <option value="" disabled selected>Select an audience</option>
+              <option value="all">All users</option>
+              <option value="employees">Employees</option>
+              <option value="staff">Staff</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Message</label>
+            <textarea name="message" rows="6" class="mt-1 w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm shadow-sm focus:border-ink-950 focus:ring-2 focus:ring-slate-200" placeholder="Write your message..."></textarea>
+          </div>
+
+          <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+            Broadcast
+          </button>
+        </form>
+      </div>
+    </section>
+  </div>
+{% endblock %}
