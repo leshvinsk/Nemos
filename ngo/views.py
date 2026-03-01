@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from ngo.services.activity_service import ActivityService
 
@@ -45,7 +45,7 @@ def admin_ngo_create(request):
 
 
 @_staff_only
-@require_http_methods(["POST", "PATCH"])
+@require_POST
 def admin_ngo_update(request, ngo_id: int):
     service = ActivityService()
     service.update_ngo(ngo_id, request.POST)
@@ -54,7 +54,7 @@ def admin_ngo_update(request, ngo_id: int):
 
 
 @_staff_only
-@require_http_methods(["POST", "DELETE"])
+@require_POST
 def admin_ngo_delete(request, ngo_id: int):
     service = ActivityService()
     service.deactivate_ngo(ngo_id)
@@ -84,7 +84,7 @@ def admin_activity_create(request):
 
 
 @_staff_only
-@require_http_methods(["POST", "PATCH"])
+@require_POST
 def admin_activity_update(request, activity_id: int):
     service = ActivityService()
     service.update_slot(activity_id, request.POST)
@@ -93,7 +93,7 @@ def admin_activity_update(request, activity_id: int):
 
 
 @_staff_only
-@require_http_methods(["POST", "DELETE"])
+@require_POST
 def admin_activity_delete(request, activity_id: int):
     service = ActivityService()
     service.deactivate_slot(activity_id)

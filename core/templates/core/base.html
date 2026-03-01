@@ -93,9 +93,12 @@
           <div class="flex items-center gap-2">
             {% if user.is_authenticated %}
               <span class="hidden text-sm text-slate-600 sm:inline">Signed in as <span class="font-medium text-slate-900">{{ user.username }}</span></span>
-              <a href="{% url 'accounts:logout' %}" class="rounded-full bg-ink-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
-                Log Out
-              </a>
+              <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full bg-ink-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+                  Log Out
+                </button>
+              </form>
             {% else %}
               <a href="{% url 'accounts:login' %}" class="rounded-full bg-ink-950 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
                 Login

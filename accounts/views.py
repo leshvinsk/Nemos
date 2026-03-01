@@ -1,8 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_POST
 
+@ensure_csrf_cookie
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     if request.method == "GET":
@@ -19,6 +22,7 @@ def login_view(request):
     login(request, user)
     return redirect("ngo:activity_list")
 
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect("accounts:login")

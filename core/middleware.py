@@ -19,7 +19,8 @@ class RequestTimingMiddleware:
 
 class MethodOverrideMiddleware:
     """
-    Allows HTML forms to emulate PATCH/DELETE by sending POST with _method.
+    Exposes `_method` value for views without mutating request.method.
+    Keep the actual HTTP method as POST so Django CSRF can validate form tokens.
     """
 
     def __init__(self, get_response):
@@ -29,7 +30,7 @@ class MethodOverrideMiddleware:
         if request.method == "POST" and "_method" in request.POST:
             override = (request.POST.get("_method") or "").upper()
             if override in {"PATCH", "DELETE"}:
-                request.method = override
+                request.method_override = override
         return self.get_response(request)
 
 

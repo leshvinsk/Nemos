@@ -79,7 +79,6 @@
                 <div class="grid w-full gap-3 lg:w-96">
                   <form method="post" action="{% url 'ngo:admin_ngo_update' n.id %}" class="rounded-2xl border border-slate-200/70 bg-white/60 p-4">
                     {% csrf_token %}
-                    <input type="hidden" name="_method" value="PATCH" />
 
                     <div class="grid gap-3">
                       <div>
@@ -109,7 +108,6 @@
 
                   <form method="post" action="{% url 'ngo:admin_ngo_delete' n.id %}">
                     {% csrf_token %}
-                    <input type="hidden" name="_method" value="DELETE" />
                     <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-white/60 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
                       Deactivate
                     </button>
