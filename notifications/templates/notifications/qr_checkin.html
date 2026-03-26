@@ -1,12 +1,12 @@
 {% extends "core/base.html" %}
 
 {% block content %}
-  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-8 shadow-soft backdrop-blur-xl">
+  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl sm:p-8">
     <div class="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-accent-200/70 blur-3xl"></div>
     <div class="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-slate-100 blur-3xl"></div>
     <div class="relative">
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Attendance</p>
-      <h1 class="mt-2 text-3xl font-semibold tracking-tight">QR Checkin</h1>
+      <h1 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">QR Checkin</h1>
       <p class="mt-2 max-w-3xl text-sm/6 text-slate-600">
         This module supports event-based QR generation, controlled check-in activation, live attendance monitoring, and duplicate check-in prevention for Service Day activities.
       </p>
@@ -15,7 +15,7 @@
 
   <div class="mt-6 grid gap-6">
     <section>
-      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300">
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300 sm:p-6">
         <h2 class="text-base font-semibold tracking-tight">Generate Check-In QR</h2>
         <p class="mt-1 text-sm/6 text-slate-600">
           Select the Service Day activity first, then generate the QR code and start the check-in session.
@@ -52,8 +52,8 @@
           </div>
         </div>
 
-        <div id="qr-panel" class="mt-5 hidden rounded-3xl border border-slate-200/70 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-slate-300">
-          <div class="flex items-center justify-between">
+        <div id="qr-panel" class="mt-5 hidden rounded-3xl border border-slate-200/70 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-slate-300 sm:p-6">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Unique Check-In Token</p>
               <h3 id="token-value" class="mt-2 text-lg font-semibold tracking-tight text-slate-900">-</h3>
@@ -64,8 +64,8 @@
           </div>
 
           <div class="mt-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5">
-            <div class="mx-auto flex h-[18rem] w-[18rem] items-center justify-center rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200">
-              <svg id="qr-checkin-code" viewBox="0 0 210 210" class="h-64 w-64" aria-label="QR code preview" role="img" xmlns="http://www.w3.org/2000/svg">
+            <div class="mx-auto flex h-[15rem] w-[15rem] items-center justify-center rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200 sm:h-[18rem] sm:w-[18rem]">
+              <svg id="qr-checkin-code" viewBox="0 0 210 210" class="h-52 w-52 sm:h-64 sm:w-64" aria-label="QR code preview" role="img" xmlns="http://www.w3.org/2000/svg">
                 <rect width="210" height="210" fill="#ffffff" />
                 <rect x="10" y="10" width="50" height="50" fill="#111827" />
                 <rect x="20" y="20" width="30" height="30" fill="#ffffff" />

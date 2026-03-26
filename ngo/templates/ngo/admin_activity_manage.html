@@ -1,12 +1,12 @@
 ﻿{% extends "core/base.html" %}
 
 {% block content %}
-  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-8 shadow-soft backdrop-blur-xl">
+  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl sm:p-8">
     <div class="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-accent-200/70 blur-3xl"></div>
     <div class="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-slate-100 blur-3xl"></div>
     <div class="relative">
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Admin</p>
-      <h1 class="mt-2 text-3xl font-semibold tracking-tight">Manage activities</h1>
+      <h1 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Manage activities</h1>
       <p class="mt-2 max-w-3xl text-sm/6 text-slate-600">
         Create new opportunities, adjust capacity and cutoffs, and deactivate activities when needed.
       </p>
@@ -15,7 +15,7 @@
 
   <div class="mt-6 grid gap-6 lg:grid-cols-12">
     <section class="lg:col-span-4">
-      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300">
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-5 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300 sm:p-6">
         <h2 class="text-base font-semibold tracking-tight">Create slot</h2>
         <form method="post" action="{% url 'ngo:admin_activity_create' %}" class="mt-4 space-y-4">
           {% csrf_token %}
@@ -53,7 +53,7 @@
           <div class="space-y-3">
             <div class="rounded-2xl border border-slate-200/70 bg-white/60 p-4">
               <p class="text-sm font-semibold text-slate-700">Service Period</p>
-              <div class="mt-2 grid grid-cols-2 gap-3">
+              <div class="mt-2 grid gap-3 sm:grid-cols-2">
                 <div>
                   <label class="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date</label>
                   <input name="service_date_date" type="date" required placeholder="YYYY-MM-DD" class="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-sm shadow-sm focus:border-ink-950 focus:ring-2 focus:ring-slate-200" />
@@ -66,7 +66,7 @@
             </div>
             <div class="rounded-2xl border border-slate-200/70 bg-white/60 p-4">
               <p class="text-sm font-semibold text-slate-700">Cut-Off Period</p>
-              <div class="mt-2 grid grid-cols-2 gap-3">
+              <div class="mt-2 grid gap-3 sm:grid-cols-2">
                 <div>
                   <label class="block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Date</label>
                   <input name="cutoff_date" type="date" required placeholder="YYYY-MM-DD" class="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2.5 text-sm shadow-sm focus:border-ink-950 focus:ring-2 focus:ring-slate-200" />
