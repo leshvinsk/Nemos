@@ -8,5 +8,6 @@ urlpatterns = [
     path("admin/notifications/", views.admin_notifications, name="admin_notifications"),
     path("admin/notifications/schedule/", views.schedule, name="schedule"),
     path("admin/notifications/broadcast/", views.broadcast, name="broadcast"),
+    path("admin/notifications/qr-checkin/", views.qr_checkin, name="qr_checkin"),
 ]
 

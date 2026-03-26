@@ -1,0 +1,407 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-8 shadow-soft backdrop-blur-xl">
+    <div class="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-accent-200/70 blur-3xl"></div>
+    <div class="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-slate-100 blur-3xl"></div>
+    <div class="relative">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Attendance</p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight">QR Checkin</h1>
+      <p class="mt-2 max-w-3xl text-sm/6 text-slate-600">
+        This module supports event-based QR generation, controlled check-in activation, live attendance monitoring, and duplicate check-in prevention for Service Day activities.
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-6 grid gap-6">
+    <section>
+      <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300">
+        <h2 class="text-base font-semibold tracking-tight">Generate Check-In QR</h2>
+        <p class="mt-1 text-sm/6 text-slate-600">
+          Select the Service Day activity first, then generate the QR code and start the check-in session.
+        </p>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700">Service Day Activity</label>
+            <select id="activity-select" class="mt-1 w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm shadow-sm">
+              <option value="">Select an activity</option>
+              {% for item in activities %}
+                <option
+                  value="{{ item.id }}"
+                  data-ngo="{{ item.ngo.name }}"
+                  data-type="{{ item.service_type }}"
+                  data-date="{{ item.service_date|date:'Y-m-d H:i' }}"
+                  data-slots="{{ item.max_slots }}"
+                >
+                  {{ item.ngo.name }} - {{ item.service_type }} - {{ item.service_date|date:"Y-m-d H:i" }}
+                </option>
+              {% empty %}
+                <option value="">No activities available</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            <button id="generate-start-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+              Generate and Start Check-In
+            </button>
+            <button id="download-qr-button" type="button" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-400 transition" disabled>
+              Download QR
+            </button>
+          </div>
+        </div>
+
+        <div id="qr-panel" class="mt-5 hidden rounded-3xl border border-slate-200/70 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-slate-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Unique Check-In Token</p>
+              <h3 id="token-value" class="mt-2 text-lg font-semibold tracking-tight text-slate-900">-</h3>
+            </div>
+            <span class="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+              Active Session
+            </span>
+          </div>
+
+          <div class="mt-5 rounded-[2rem] border border-slate-200 bg-slate-50 p-5">
+            <div class="mx-auto flex h-[18rem] w-[18rem] items-center justify-center rounded-[2rem] bg-white shadow-soft ring-1 ring-slate-200">
+              <svg id="qr-checkin-code" viewBox="0 0 210 210" class="h-64 w-64" aria-label="QR code preview" role="img" xmlns="http://www.w3.org/2000/svg">
+                <rect width="210" height="210" fill="#ffffff" />
+                <rect x="10" y="10" width="50" height="50" fill="#111827" />
+                <rect x="20" y="20" width="30" height="30" fill="#ffffff" />
+                <rect x="28" y="28" width="14" height="14" fill="#111827" />
+                <rect x="150" y="10" width="50" height="50" fill="#111827" />
+                <rect x="160" y="20" width="30" height="30" fill="#ffffff" />
+                <rect x="168" y="28" width="14" height="14" fill="#111827" />
+                <rect x="10" y="150" width="50" height="50" fill="#111827" />
+                <rect x="20" y="160" width="30" height="30" fill="#ffffff" />
+                <rect x="28" y="168" width="14" height="14" fill="#111827" />
+                <g id="qr-dynamic-pattern"></g>
+              </svg>
+            </div>
+            <p id="qr-caption" class="mt-4 text-center text-sm text-slate-600">Generate a QR code to begin check-in for the selected event.</p>
+          </div>
+
+          <div class="mt-5 grid gap-3 sm:grid-cols-2">
+            <div class="rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-3">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Generated</p>
+              <p id="generated-at" class="mt-1 text-sm font-medium text-slate-900">-</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-3">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Selected Activity</p>
+              <p id="selected-activity-name" class="mt-1 text-sm font-medium text-slate-900">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="session-sections" class="hidden">
+      <div class="grid gap-6">
+        <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300">
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 class="text-base font-semibold tracking-tight">Live Attendance Monitor</h2>
+              <p class="mt-1 text-sm/6 text-slate-600">
+                Attendance recording only becomes valid when the session is switched from offline to live.
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span id="live-status-badge" class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200">
+                Offline
+              </span>
+              <button id="toggle-live-button" type="button" class="inline-flex items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95">
+                Go Live
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Registered</p>
+              <p id="registered-count" class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">0</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Checked In</p>
+              <p id="checked-in-count" class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">0</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/80 p-4">
+              <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Pending</p>
+              <p id="pending-count" class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">0</p>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-3xl border border-slate-200/70 bg-white/80 p-5">
+            <div class="flex flex-col gap-4 md:flex-row md:items-end">
+              <div class="flex-1">
+                <label class="block text-sm font-medium text-slate-700">Simulated Employee Check-In</label>
+                <select id="employee-checkin-select" class="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+                  <option value="">Select employee</option>
+                  {% for employee in employees %}
+                    <option value="{{ employee.username }}">{{ employee.username }}{% if employee.get_full_name %} - {{ employee.get_full_name }}{% endif %}</option>
+                  {% empty %}
+                    <option value="">No employee accounts available</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button id="record-checkin-button" type="button" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-400 transition" disabled>
+                Record Check-In
+              </button>
+            </div>
+            <p id="attendance-hint" class="mt-3 text-sm text-slate-600">
+              The check-in session is offline. Attendance entries will not be recorded until you click Go Live.
+            </p>
+            <p id="attendance-feedback" class="mt-2 hidden rounded-2xl border px-4 py-3 text-sm"></p>
+          </div>
+
+          <div class="mt-5 overflow-hidden rounded-3xl border border-slate-200/70">
+            <table class="min-w-full divide-y divide-slate-200/70 text-sm">
+              <thead class="bg-white/50">
+                <tr>
+                  <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Employee</th>
+                  <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Status</th>
+                  <th class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Arrival Time</th>
+                </tr>
+              </thead>
+              <tbody id="attendance-table-body" class="divide-y divide-slate-200/70 bg-white/70">
+                <tr id="attendance-empty-row">
+                  <td colspan="3" class="px-5 py-8 text-center text-slate-500">No valid attendance records yet. Start the session and switch it to live to record check-ins.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/70 bg-white/70 p-6 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300">
+          <h2 class="text-base font-semibold tracking-tight">Employee Checkin Journey</h2>
+          <div class="mt-4 grid gap-4 md:grid-cols-3">
+            <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-5 transition hover:-translate-y-0.5 hover:border-slate-300">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Step 1</p>
+              <h3 class="mt-2 text-lg font-semibold tracking-tight">Generate event QR</h3>
+              <p class="mt-2 text-sm/6 text-slate-600">The administrator selects a Service Day event and starts a dedicated QR check-in session.</p>
+            </div>
+            <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-5 transition hover:-translate-y-0.5 hover:border-slate-300">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Step 2</p>
+              <h3 class="mt-2 text-lg font-semibold tracking-tight">Activate live mode</h3>
+              <p class="mt-2 text-sm/6 text-slate-600">Attendance becomes valid only when the live monitor is enabled by the administrator at the event.</p>
+            </div>
+            <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-5 transition hover:-translate-y-0.5 hover:border-slate-300">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Step 3</p>
+              <h3 class="mt-2 text-lg font-semibold tracking-tight">Prevent duplicates</h3>
+              <p class="mt-2 text-sm/6 text-slate-600">Each employee can only be recorded once in the active session, preventing duplicate check-ins.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const activitySelect = document.getElementById("activity-select");
+      const generateButton = document.getElementById("generate-start-button");
+      const downloadButton = document.getElementById("download-qr-button");
+      const qrPanel = document.getElementById("qr-panel");
+      const sessionSections = document.getElementById("session-sections");
+      const tokenValue = document.getElementById("token-value");
+      const generatedAt = document.getElementById("generated-at");
+      const selectedActivityName = document.getElementById("selected-activity-name");
+      const qrCaption = document.getElementById("qr-caption");
+      const qrSvg = document.getElementById("qr-checkin-code");
+      const qrPattern = document.getElementById("qr-dynamic-pattern");
+      const toggleLiveButton = document.getElementById("toggle-live-button");
+      const liveStatusBadge = document.getElementById("live-status-badge");
+      const recordCheckinButton = document.getElementById("record-checkin-button");
+      const employeeSelect = document.getElementById("employee-checkin-select");
+      const attendanceHint = document.getElementById("attendance-hint");
+      const attendanceFeedback = document.getElementById("attendance-feedback");
+      const attendanceTableBody = document.getElementById("attendance-table-body");
+      const registeredCount = document.getElementById("registered-count");
+      const checkedInCount = document.getElementById("checked-in-count");
+      const pendingCount = document.getElementById("pending-count");
+
+      let sessionStarted = false;
+      let sessionLive = false;
+      let totalRegistered = 0;
+      const checkedInEmployees = new Set();
+
+      const showFeedback = (message, tone) => {
+        attendanceFeedback.textContent = message;
+        attendanceFeedback.className = "mt-2 rounded-2xl border px-4 py-3 text-sm";
+        if (tone === "success") {
+          attendanceFeedback.classList.add("border-emerald-200", "bg-emerald-50", "text-emerald-900");
+        } else if (tone === "warning") {
+          attendanceFeedback.classList.add("border-amber-200", "bg-amber-50", "text-amber-900");
+        } else {
+          attendanceFeedback.classList.add("border-rose-200", "bg-rose-50", "text-rose-900");
+        }
+        attendanceFeedback.classList.remove("hidden");
+      };
+
+      const renderQrPattern = (seedText) => {
+        qrPattern.innerHTML = "";
+        const numbers = Array.from(seedText).map((char, index) => char.charCodeAt(0) + index);
+        let cursor = 0;
+        for (let y = 0; y < 8; y += 1) {
+          for (let x = 0; x < 8; x += 1) {
+            const value = numbers[cursor % numbers.length];
+            cursor += 1;
+            if (value % 2 === 0) {
+              const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+              rect.setAttribute("x", String(74 + x * 12));
+              rect.setAttribute("y", String(74 + y * 12));
+              rect.setAttribute("width", "8");
+              rect.setAttribute("height", "8");
+              rect.setAttribute("fill", "#111827");
+              qrPattern.appendChild(rect);
+            }
+          }
+        }
+      };
+
+      const updateCounts = () => {
+        registeredCount.textContent = String(totalRegistered);
+        checkedInCount.textContent = String(checkedInEmployees.size);
+        pendingCount.textContent = String(Math.max(totalRegistered - checkedInEmployees.size, 0));
+      };
+
+      const updateLiveUi = () => {
+        if (sessionLive) {
+          liveStatusBadge.textContent = "Live";
+          liveStatusBadge.className = "rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200";
+          toggleLiveButton.textContent = "Live Session Active";
+          toggleLiveButton.disabled = true;
+          toggleLiveButton.classList.add("cursor-not-allowed", "opacity-60");
+          recordCheckinButton.disabled = false;
+          recordCheckinButton.className = "inline-flex items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95";
+          attendanceHint.textContent = "The session is live. Employee arrivals can now be recorded as valid attendance entries.";
+        } else {
+          liveStatusBadge.textContent = "Offline";
+          liveStatusBadge.className = "rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-200";
+          recordCheckinButton.disabled = true;
+          recordCheckinButton.className = "inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-400 transition";
+          attendanceHint.textContent = "The check-in session is offline. Attendance entries will not be recorded until you click Go Live.";
+        }
+      };
+
+      const addAttendanceRow = (employeeCode, employeeLabel) => {
+        const emptyRow = document.getElementById("attendance-empty-row");
+        if (emptyRow) {
+          emptyRow.remove();
+        }
+        const row = document.createElement("tr");
+        const now = new Date();
+        const timeLabel = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        row.innerHTML = `
+          <td class="px-5 py-4 font-medium text-slate-900">${employeeCode} - ${employeeLabel}</td>
+          <td class="px-5 py-4">
+            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+              Verified
+            </span>
+          </td>
+          <td class="px-5 py-4 text-slate-700">${timeLabel}</td>
+        `;
+        attendanceTableBody.prepend(row);
+      };
+
+      generateButton.addEventListener("click", () => {
+        const option = activitySelect.options[activitySelect.selectedIndex];
+        const activityId = activitySelect.value;
+        if (!activityId) {
+          showFeedback("Select an activity before generating the QR check-in session.", "warning");
+          return;
+        }
+
+        sessionStarted = true;
+        sessionLive = false;
+        checkedInEmployees.clear();
+        attendanceTableBody.innerHTML = `
+          <tr id="attendance-empty-row">
+            <td colspan="3" class="px-5 py-8 text-center text-slate-500">No valid attendance records yet. Start the session and switch it to live to record check-ins.</td>
+          </tr>
+        `;
+        attendanceFeedback.classList.add("hidden");
+
+        const ngo = option.dataset.ngo || "Selected activity";
+        const serviceType = option.dataset.type || "Service Day";
+        const serviceDate = option.dataset.date || "-";
+        totalRegistered = Number(option.dataset.slots || 0);
+        const token = `SD-${activityId}-${Date.now().toString().slice(-6)}`;
+        const generatedLabel = new Date().toLocaleString([], {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        tokenValue.textContent = token;
+        generatedAt.textContent = generatedLabel;
+        selectedActivityName.textContent = `${ngo} - ${serviceType}`;
+        qrCaption.textContent = `Generated for ${ngo} on ${serviceDate}. Use this QR for controlled employee check-in at the venue.`;
+        qrPanel.classList.remove("hidden");
+        sessionSections.classList.remove("hidden");
+        downloadButton.disabled = false;
+        downloadButton.className = "inline-flex items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95";
+        toggleLiveButton.disabled = false;
+        toggleLiveButton.textContent = "Go Live";
+        toggleLiveButton.classList.remove("cursor-not-allowed", "opacity-60");
+        renderQrPattern(token + ngo + serviceType);
+        updateCounts();
+        updateLiveUi();
+        showFeedback("QR check-in session generated. Switch the attendance monitor to live when the event begins.", "success");
+      });
+
+      toggleLiveButton.addEventListener("click", () => {
+        if (!sessionStarted) {
+          showFeedback("Generate a QR check-in session before enabling live attendance.", "warning");
+          return;
+        }
+        sessionLive = true;
+        updateLiveUi();
+        showFeedback("Live attendance is now active. New check-ins will be treated as valid attendance records.", "success");
+      });
+
+      recordCheckinButton.addEventListener("click", () => {
+        if (!sessionLive) {
+          showFeedback("Attendance cannot be recorded while the monitor is offline.", "warning");
+          return;
+        }
+
+        const employeeValue = employeeSelect.value;
+        const employeeLabel = employeeSelect.options[employeeSelect.selectedIndex]?.text || "";
+        if (!employeeValue) {
+          showFeedback("Select an employee to record the check-in.", "warning");
+          return;
+        }
+
+        if (checkedInEmployees.has(employeeValue)) {
+          showFeedback("Duplicate check-in prevented. This employee has already been recorded for the active session.", "error");
+          return;
+        }
+
+        checkedInEmployees.add(employeeValue);
+        addAttendanceRow(employeeValue, employeeLabel.replace(`${employeeValue} - `, ""));
+        updateCounts();
+        showFeedback(`Check-in recorded successfully for ${employeeLabel}.`, "success");
+      });
+
+      downloadButton.addEventListener("click", () => {
+        if (downloadButton.disabled) {
+          return;
+        }
+        const serializer = new XMLSerializer();
+        const source = serializer.serializeToString(qrSvg);
+        const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "nemos-qr-checkin.svg";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+    })();
+  </script>
+{% endblock %}

@@ -1,4 +1,6 @@
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 
 class NGO(models.Model):
@@ -7,12 +9,15 @@ class NGO(models.Model):
     contact_email = models.EmailField(blank=True)
     contact_phone = models.CharField(max_length=30, blank=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return self.name
 
     class Meta:
         verbose_name_plural = "NGOs"
+        ordering = ["name"]
 
 
 class NGOAvailability(models.Model):
@@ -24,12 +29,28 @@ class NGOAvailability(models.Model):
     cutoff_time = models.DateTimeField()
     max_slots = models.PositiveIntegerField()
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return f"{self.ngo.name} - {self.service_date}"
 
     class Meta:
         verbose_name_plural = "NGOAvailabilities"
+        ordering = ["service_date", "ngo__name"]
+
+    def clean(self):
+        if self.max_slots < 1:
+            raise ValidationError({"max_slots": "Maximum slots must be at least 1."})
+
+        if self.cutoff_time and self.service_date and self.cutoff_time >= self.service_date:
+            raise ValidationError({"cutoff_time": "Cut-off time must be earlier than the service date."})
+
+        if self.service_date and timezone.is_naive(self.service_date):
+            raise ValidationError({"service_date": "Service date must include timezone information."})
+
+        if self.cutoff_time and timezone.is_naive(self.cutoff_time):
+            raise ValidationError({"cutoff_time": "Cut-off time must include timezone information."})
 
     # Compatibility for existing templates/services that reference `name`.
     @property

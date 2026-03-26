@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -39,3 +40,31 @@ class CsrfFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("accounts:login"))
+
+
+class LoginRedirectTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin_user = get_user_model().objects.create_user(
+            username="adminuser",
+            password="test-pass-123",
+            is_staff=True,
+        )
+        self.employee_user = get_user_model().objects.create_user(
+            username="employeeuser",
+            password="test-pass-123",
+        )
+        employee_group, _ = Group.objects.get_or_create(name="Employee")
+        self.employee_user.groups.add(employee_group)
+
+    def test_authenticated_admin_visiting_login_is_redirected_to_admin_home(self):
+        self.client.force_login(self.admin_user)
+        response = self.client.get(reverse("accounts:login"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("ngo:admin_activity_manage"))
+
+    def test_authenticated_employee_visiting_login_is_redirected_to_employee_home(self):
+        self.client.force_login(self.employee_user)
+        response = self.client.get(reverse("accounts:login"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("ngo:activity_list"))

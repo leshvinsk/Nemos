@@ -2,9 +2,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
+from accounts.permissions import is_administrator
 from ngo.services.activity_service import ActivityService
+from registrations.models import Registration
 
 
 def _staff_only(view_func):
@@ -12,7 +15,7 @@ def _staff_only(view_func):
         if not request.user.is_authenticated:
             # Delegate to login_required behavior
             return login_required(view_func)(request, *args, **kwargs)
-        if not request.user.is_staff:
+        if not is_administrator(request.user):
             return HttpResponseForbidden("Staff access required.")
         return view_func(request, *args, **kwargs)
 
@@ -25,7 +28,19 @@ def activity_list(request):
     service = ActivityService()
     # Availability slots for employees (computed slot counters attached in service).
     activities = service.list_available_slots_for_employees()
-    return render(request, "ngo/activity_list.html", {"activities": activities})
+    registered_ids = set(
+        Registration.objects.filter(employee=request.user).values_list("activity_id", flat=True)
+    )
+    now = timezone.now()
+    return render(
+        request,
+        "ngo/activity_list.html",
+        {
+            "activities": activities,
+            "registered_ids": registered_ids,
+            "now": now,
+        },
+    )
 
 @_staff_only
 @require_GET
@@ -39,8 +54,12 @@ def admin_ngo_manage(request):
 @require_POST
 def admin_ngo_create(request):
     service = ActivityService()
-    service.create_ngo(request.POST)
-    messages.success(request, "NGO created successfully.")
+    try:
+        service.create_ngo(request.POST)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "NGO created successfully.")
     return redirect("ngo:admin_ngo_manage")
 
 
@@ -48,8 +67,12 @@ def admin_ngo_create(request):
 @require_POST
 def admin_ngo_update(request, ngo_id: int):
     service = ActivityService()
-    service.update_ngo(ngo_id, request.POST)
-    messages.success(request, "NGO updated successfully.")
+    try:
+        service.update_ngo(ngo_id, request.POST)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "NGO updated successfully.")
     return redirect("ngo:admin_ngo_manage")
 
 
@@ -78,8 +101,12 @@ def admin_activity_create(request):
     if not request.POST.get("ngo_id"):
         messages.error(request, "Please select an NGO.")
         return redirect("ngo:admin_activity_manage")
-    service.create_slot(request.POST)
-    messages.success(request, "Slot created successfully.")
+    try:
+        service.create_slot(request.POST)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Slot created successfully.")
     return redirect("ngo:admin_activity_manage")
 
 
@@ -87,8 +114,12 @@ def admin_activity_create(request):
 @require_POST
 def admin_activity_update(request, activity_id: int):
     service = ActivityService()
-    service.update_slot(activity_id, request.POST)
-    messages.success(request, "Slot updated successfully.")
+    try:
+        service.update_slot(activity_id, request.POST)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Slot updated successfully.")
     return redirect("ngo:admin_activity_manage")
 
 

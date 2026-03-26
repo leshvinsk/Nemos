@@ -4,6 +4,8 @@ import time
 
 from django.shortcuts import redirect
 
+from accounts.permissions import is_administrator
+
 
 class RequestTimingMiddleware:
     def __init__(self, get_response):
@@ -41,7 +43,7 @@ class RoleAccessMiddleware:
     def __call__(self, request):
         if request.path.startswith("/service-day/admin/"):
             user = getattr(request, "user", None)
-            if not user or not user.is_authenticated or not user.is_staff:
+            if not user or not user.is_authenticated or not is_administrator(user):
                 return redirect("/login/")
         return self.get_response(request)
 

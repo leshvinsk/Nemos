@@ -1,11 +1,13 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
+from accounts.permissions import is_administrator
 from ngo.services.activity_service import ActivityService
 
-staff_required = user_passes_test(lambda u: u.is_staff)
+staff_required = user_passes_test(is_administrator)
 
 
 @staff_required
@@ -16,6 +18,22 @@ def admin_notifications(request):
         request,
         "notifications/admin_notifications.html",
         {"activities": activities},
+    )
+
+
+@staff_required
+@require_GET
+def qr_checkin(request):
+    activities = ActivityService().list_all_admin()
+    User = get_user_model()
+    employees = User.objects.filter(is_active=True, is_staff=False).order_by("username")[:20]
+    return render(
+        request,
+        "notifications/qr_checkin.html",
+        {
+            "activities": activities[:3],
+            "employees": employees,
+        },
     )
 
 

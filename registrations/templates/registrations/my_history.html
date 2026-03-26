@@ -1,0 +1,47 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+  <div class="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 p-8 shadow-soft backdrop-blur-xl">
+    <div class="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-accent-200/70 blur-3xl"></div>
+    <div class="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-slate-100 blur-3xl"></div>
+    <div class="relative">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Employee</p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight">Participation History</h1>
+      <p class="mt-2 max-w-2xl text-sm/6 text-slate-600">
+        Review the activities you have already registered for and use this page as evidence of employee participation history.
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-6 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/70 shadow-soft backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-slate-300">
+    <div class="border-b border-slate-200/70 px-6 py-4">
+      <h2 class="text-base font-semibold tracking-tight">My registrations</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200/70 text-sm">
+        <thead class="bg-white/40">
+          <tr>
+            <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">NGO</th>
+            <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Service Type</th>
+            <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Service Date</th>
+            <th class="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Registered At</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200/70">
+          {% for registration in history %}
+            <tr class="hover:bg-slate-900/[0.03]">
+              <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">{{ registration.activity.ngo.name }}</td>
+              <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ registration.activity.service_type }}</td>
+              <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ registration.activity.service_date|date:"Y-m-d H:i" }}</td>
+              <td class="whitespace-nowrap px-6 py-4 text-slate-700">{{ registration.registered_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="px-6 py-10 text-center text-slate-600">You have not registered for any activities yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

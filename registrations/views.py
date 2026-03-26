@@ -4,6 +4,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
+from accounts.permissions import is_administrator
 from registrations.services.registration_service import RegistrationService
 
 
@@ -11,7 +12,7 @@ def _staff_only(view_func):
     def _wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return login_required(view_func)(request, *args, **kwargs)
-        if not request.user.is_staff:
+        if not is_administrator(request.user):
             return HttpResponseForbidden("Staff access required.")
         return view_func(request, *args, **kwargs)
 
@@ -40,6 +41,14 @@ def cancel(request, activity_id: int):
     else:
         messages.error(request, msg)
     return redirect("ngo:activity_list")
+
+
+@login_required
+@require_GET
+def my_history(request):
+    service = RegistrationService()
+    history = service.employee_history(request.user)
+    return render(request, "registrations/my_history.html", {"history": history})
 
 
 @_staff_only

@@ -62,9 +62,20 @@
               {% csrf_token %}
               <button
                 type="submit"
-                class="inline-flex w-full items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95"
+                {% if a.id in registered_ids or a.slots_remaining|default:0 == 0 or now > a.cutoff_time %}
+                  disabled
+                {% endif %}
+                class="inline-flex w-full items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                Register
+                {% if a.id in registered_ids %}
+                  Already registered
+                {% elif now > a.cutoff_time %}
+                  Cutoff passed
+                {% elif a.slots_remaining|default:0 == 0 %}
+                  Fully booked
+                {% else %}
+                  Register
+                {% endif %}
               </button>
             </form>
 
@@ -72,7 +83,10 @@
               {% csrf_token %}
               <button
                 type="submit"
-                class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white/60 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white"
+                {% if a.id not in registered_ids or now > a.cutoff_time %}
+                  disabled
+                {% endif %}
+                class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white/60 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
                 Cancel registration
               </button>

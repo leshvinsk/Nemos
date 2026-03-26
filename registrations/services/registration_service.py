@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, F, IntegerField, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from ngo.models import NGOAvailability
@@ -30,7 +32,13 @@ class RegistrationService:
         if taken >= slot.max_slots:
             return False, "No slots remaining for this activity."
 
-        Registration.objects.create(employee=user, activity=slot)
+        registration = Registration(employee=user, activity=slot)
+        try:
+            registration.full_clean()
+        except ValidationError as exc:
+            return False, " ".join(exc.messages)
+
+        registration.save()
         return True, "Registration successful."
 
     @staticmethod
@@ -56,31 +64,23 @@ class RegistrationService:
 
     @staticmethod
     def monitor_summary():
-        slots = list(NGOAvailability.objects.select_related("ngo").filter(is_active=True, ngo__is_active=True))
-
-        counts = (
-            Registration.objects.filter(activity__in=slots)
-            .values("activity_id")
-            .annotate(taken=Count("id"))
-        )
-        taken_by_slot_id = {row["activity_id"]: row["taken"] for row in counts}
+        slots = list(RegistrationService._activity_summary_queryset())
 
         offered = sum(int(s.max_slots) for s in slots)
-        taken_total = sum(int(taken_by_slot_id.get(s.id, 0)) for s in slots)
-        remaining_total = offered - taken_total
+        taken_total = sum(int(s.registration_count) for s in slots)
+        remaining_total = sum(int(s.slots_remaining) for s in slots)
 
         rows = []
         for s in slots:
-            taken = int(taken_by_slot_id.get(s.id, 0))
-            remaining = max(int(s.max_slots) - taken, 0)
             rows.append(
                 {
                     "name": s.ngo.name,
                     "service_type": s.service_type,
                     "location": s.location,
+                    "service_date": s.service_date,
                     "cutoff_time": s.cutoff_time,
-                    "taken": taken,
-                    "remaining": remaining,
+                    "taken": int(s.registration_count),
+                    "remaining": int(s.slots_remaining),
                 }
             )
 
@@ -90,4 +90,26 @@ class RegistrationService:
             "remaining": remaining_total,
             "rows": rows,
         }
+
+    @staticmethod
+    def employee_history(user):
+        return (
+            Registration.objects.filter(employee=user)
+            .select_related("activity__ngo")
+            .order_by("-registered_at")
+        )
+
+    @staticmethod
+    def _activity_summary_queryset():
+        return (
+            NGOAvailability.objects.select_related("ngo")
+            .filter(is_active=True, ngo__is_active=True)
+            .annotate(registration_count=Count("registrations", distinct=True))
+            .annotate(
+                slots_remaining=F("max_slots")
+                - Coalesce(F("registration_count"), Value(0), output_field=IntegerField())
+            )
+            .order_by("service_date", "ngo__name")
+        )
+
 
