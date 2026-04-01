@@ -55,7 +55,11 @@ class ActivityService:
     # --------------------
     @staticmethod
     def list_ngos_admin():
-        return NGO.objects.filter(is_active=True).order_by("name")
+        return (
+            NGO.objects.filter(is_active=True)
+            .prefetch_related("availabilities")
+            .order_by("name")
+        )
 
     @staticmethod
     def create_ngo(data):
@@ -121,6 +125,7 @@ class ActivityService:
     def list_slots_admin():
         return (
             NGOAvailability.objects.select_related("ngo")
+            .prefetch_related("registrations")
             .filter(is_active=True, ngo__is_active=True)
             .order_by("-service_date")
         )
