@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -43,14 +45,22 @@ class NGOAvailability(models.Model):
         if self.max_slots < 1:
             raise ValidationError({"max_slots": "Maximum slots must be at least 1."})
 
-        if self.cutoff_time and self.service_date and self.cutoff_time >= self.service_date:
-            raise ValidationError({"cutoff_time": "Cut-off time must be earlier than the service date."})
-
         if self.service_date and timezone.is_naive(self.service_date):
             raise ValidationError({"service_date": "Service date must include timezone information."})
 
         if self.cutoff_time and timezone.is_naive(self.cutoff_time):
             raise ValidationError({"cutoff_time": "Cut-off time must include timezone information."})
+
+        if self.cutoff_time and self.service_date:
+            latest_cutoff_date = (self.service_date - timedelta(days=3)).date()
+            if self.cutoff_time.date() > latest_cutoff_date:
+                raise ValidationError(
+                    {
+                        "cutoff_time": (
+                            "Cut-off date must be at least 3 days earlier than the service date."
+                        )
+                    }
+                )
 
     # Compatibility for existing templates/services that reference `name`.
     @property

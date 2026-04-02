@@ -13,6 +13,7 @@ from registrations.services.registration_service import RegistrationService
 
 class RegistrationRulesTests(TestCase):
     def setUp(self):
+        base_time = timezone.now()
         self.user = get_user_model().objects.create_user(username="employee1", password="test-pass-123")
         self.ngo = NGO.objects.create(name="Care For All", is_active=True)
         self.activity = NGOAvailability.objects.create(
@@ -20,8 +21,8 @@ class RegistrationRulesTests(TestCase):
             service_type="Beach Cleanup",
             description="Community effort",
             location="Port Klang",
-            service_date=timezone.now() + timedelta(days=5),
-            cutoff_time=timezone.now() + timedelta(days=2),
+            service_date=base_time + timedelta(days=5),
+            cutoff_time=base_time + timedelta(days=2),
             max_slots=1,
             is_active=True,
         )

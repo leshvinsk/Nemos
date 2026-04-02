@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -49,13 +51,14 @@ class AdminVisibilityTests(TestCase):
 
     def test_inactive_ngo_and_activity_are_hidden_from_admin_pages(self):
         ngo = NGO.objects.create(name="Hidden NGO", is_active=True)
+        base_time = timezone.now()
         activity = NGOAvailability.objects.create(
             ngo=ngo,
             service_type="General",
             description="Hidden activity",
             location="Test",
-            service_date=timezone.now(),
-            cutoff_time=timezone.now(),
+            service_date=base_time + timedelta(days=4),
+            cutoff_time=base_time + timedelta(days=1),
             max_slots=5,
             is_active=True,
         )
