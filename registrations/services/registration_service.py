@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, F, IntegerField, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
+from core.cache_utils import (
+    PARTICIPANT_SUMMARY_CACHE_KEY,
+    cache_timeout,
+    clear_participant_cache,
+)
 from ngo.models import NGOAvailability
 from registrations.models import Registration
 
@@ -39,6 +45,7 @@ class RegistrationService:
             return False, " ".join(exc.messages)
 
         registration.save()
+        clear_participant_cache()
         return True, "Registration successful."
 
     @staticmethod
@@ -60,10 +67,21 @@ class RegistrationService:
             return False, "No registration found to cancel."
 
         qs.delete()
+        clear_participant_cache()
         return True, "Registration cancelled."
 
     @staticmethod
     def monitor_summary():
+        cached_summary = cache.get(PARTICIPANT_SUMMARY_CACHE_KEY)
+        if cached_summary is not None:
+            return cached_summary
+
+        summary = RegistrationService.monitor_summary_uncached()
+        cache.set(PARTICIPANT_SUMMARY_CACHE_KEY, summary, cache_timeout())
+        return summary
+
+    @staticmethod
+    def monitor_summary_uncached():
         slots = list(RegistrationService._activity_summary_queryset())
 
         offered = sum(int(s.max_slots) for s in slots)

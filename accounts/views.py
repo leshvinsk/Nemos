@@ -28,9 +28,13 @@ def login_view(request):
 
     login(request, user)
     sync_default_user_groups(user)
+    request.session["role_name"] = "administrator" if user.is_staff or user.is_superuser else "employee"
+    request.session["login_username"] = user.username
+    request.session["last_login_method"] = "form"
     return redirect(next_url or login_redirect_name(user))
 
 @require_POST
 def logout_view(request):
+    request.session.flush()
     logout(request)
     return redirect("accounts:login")

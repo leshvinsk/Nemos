@@ -52,12 +52,17 @@ def env_bool(name, default=False):
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env_bool('DJANGO_DEBUG', True)
+DEBUG = env_bool('DJANGO_DEBUG', False)
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
     if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
 ]
 
 
@@ -69,7 +74,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'django_filters',
+    'drf_spectacular',
+    'channels',
+    'django_celery_beat',
     'core',
     'accounts',
     'ngo',
@@ -91,6 +102,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'nemos.urls'
+ASGI_APPLICATION = 'nemos.asgi.application'
 
 TEMPLATES = [
     {
@@ -156,6 +168,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'
@@ -166,3 +179,89 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 1800
 CSRF_COOKIE_HTTPONLY = False
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_SECURE = env_bool('DJANGO_SESSION_COOKIE_SECURE', not DEBUG)
+SESSION_COOKIE_SAMESITE = os.environ.get('DJANGO_SESSION_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_SECURE = env_bool('DJANGO_CSRF_COOKIE_SECURE', not DEBUG)
+CSRF_COOKIE_SAMESITE = os.environ.get('DJANGO_CSRF_COOKIE_SAMESITE', 'Lax')
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = os.environ.get('DJANGO_SECURE_REFERRER_POLICY', 'same-origin')
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = env_bool('DJANGO_USE_X_FORWARDED_HOST', True)
+SERVE_STATIC_FILES = env_bool('DJANGO_SERVE_STATIC_FILES', DEBUG)
+
+INTERNAL_API_TOKEN = os.environ.get('NEMOS_INTERNAL_API_TOKEN', '').strip()
+REDIS_URL = os.environ.get('DJANGO_REDIS_URL', 'redis://127.0.0.1:6379/1').strip()
+CACHE_TIMEOUT_SECONDS = int(os.environ.get('DJANGO_CACHE_TIMEOUT_SECONDS', '300'))
+PUBLIC_BASE_URL = os.environ.get('NEMOS_PUBLIC_BASE_URL', '').strip().rstrip('/')
+API_GATEWAY_URL = os.environ.get('API_GATEWAY_URL', 'http://127.0.0.1:8004').strip().rstrip('/')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', REDIS_URL)
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 5,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+        'rest_framework.filters.SearchFilter',
+    ],
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'NEMOS Service Day API',
+    'DESCRIPTION': 'Versioned REST APIs for NGO management, activity listing, registration, and cancellation.',
+    'VERSION': '1.0.0',
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': os.environ.get(
+            'DJANGO_CACHE_BACKEND',
+            'django.core.cache.backends.locmem.LocMemCache',
+        ),
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'TIMEOUT': CACHE_TIMEOUT_SECONDS,
+    }
+}
+
+if CACHES['default']['BACKEND'] == 'django.core.cache.backends.locmem.LocMemCache':
+    CACHES['default']['LOCATION'] = 'nemos-local-cache'
+    CACHES['default'].pop('OPTIONS', None)
+
+EMAIL_BACKEND = os.environ.get(
+    'DJANGO_EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@nemos.local')
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': os.environ.get(
+            'DJANGO_CHANNEL_LAYER_BACKEND',
+            'channels_redis.core.RedisChannelLayer',
+        ),
+        'CONFIG': {
+            'hosts': [os.environ.get('DJANGO_CHANNEL_REDIS_URL', REDIS_URL)],
+        },
+    }
+}

@@ -1,16 +1,50 @@
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from core.cache_utils import NGO_LIST_CACHE_KEY, cache_timeout, clear_ngo_cache
 from ngo.models import NGO, NGOAvailability
 from registrations.models import Registration
 
 
 class ActivityService:
+    @staticmethod
+    def _activity_stage(activity, now=None):
+        now = timezone.localtime(now or timezone.now())
+        service_time = timezone.localtime(activity.service_date)
+        if service_time.date() < now.date():
+            return "completed"
+        if service_time > now:
+            return "planned"
+        return "ongoing"
+
+    @staticmethod
+    def _attach_activity_status(activity, now=None):
+        stage = ActivityService._activity_stage(activity, now=now)
+        activity.lifecycle_stage = stage
+        activity.is_planned = stage == "planned"
+        activity.is_ongoing = stage == "ongoing"
+        activity.is_completed = stage == "completed"
+        activity.can_deactivate = stage != "ongoing"
+        return activity
+
+    @staticmethod
+    def _attach_ngo_status(ngo, now=None):
+        now = now or timezone.now()
+        availabilities = list(getattr(ngo, "availabilities").all()) if hasattr(ngo, "availabilities") else []
+        has_blocking_activity = any(
+            activity.is_active and ActivityService._activity_stage(activity, now=now) in {"planned", "ongoing"}
+            for activity in availabilities
+        )
+        ngo.can_deactivate = not has_blocking_activity
+        ngo.has_blocking_activity = has_blocking_activity
+        return ngo
+
     @staticmethod
     def _raise_validation_error(exc: ValidationError):
         if hasattr(exc, "message_dict"):
@@ -55,6 +89,18 @@ class ActivityService:
     # --------------------
     @staticmethod
     def list_ngos_admin():
+        cached_ngos = cache.get(NGO_LIST_CACHE_KEY)
+        if cached_ngos is not None:
+            return cached_ngos
+
+        ngos = list(ActivityService.list_ngos_admin_uncached())
+        now = timezone.now()
+        ngos = [ActivityService._attach_ngo_status(ngo, now=now) for ngo in ngos]
+        cache.set(NGO_LIST_CACHE_KEY, ngos, cache_timeout())
+        return ngos
+
+    @staticmethod
+    def list_ngos_admin_uncached():
         return (
             NGO.objects.filter(is_active=True)
             .prefetch_related("availabilities")
@@ -75,6 +121,7 @@ class ActivityService:
         except ValidationError as exc:
             ActivityService._raise_validation_error(exc)
         ngo.save()
+        clear_ngo_cache()
         return ngo
 
     @staticmethod
@@ -89,14 +136,25 @@ class ActivityService:
         except ValidationError as exc:
             ActivityService._raise_validation_error(exc)
         ngo.save(update_fields=["name", "description", "contact_email", "contact_phone"])
+        clear_ngo_cache()
         return ngo
 
     @staticmethod
     @transaction.atomic
     def deactivate_ngo(ngo_id):
         ngo = NGO.objects.select_for_update().get(id=ngo_id)
+        blocking_activity_exists = any(
+            activity.is_active and ActivityService._activity_stage(activity) in {"planned", "ongoing"}
+            for activity in ngo.availabilities.all()
+        )
+        if blocking_activity_exists:
+            raise ValueError(
+                "This NGO cannot be deactivated because it still has planned or ongoing activities. "
+                "Delete planned activities first. Ongoing activities cannot be deleted."
+            )
         ngo.is_active = False
         ngo.save(update_fields=["is_active"])
+        clear_ngo_cache()
         return ngo
 
     # -----------------------------
@@ -123,12 +181,14 @@ class ActivityService:
 
     @staticmethod
     def list_slots_admin():
-        return (
+        slots = list(
             NGOAvailability.objects.select_related("ngo")
             .prefetch_related("registrations")
             .filter(is_active=True, ngo__is_active=True)
             .order_by("-service_date")
         )
+        now = timezone.now()
+        return [ActivityService._attach_activity_status(slot, now=now) for slot in slots]
 
     @staticmethod
     def create_slot(data):
@@ -157,6 +217,7 @@ class ActivityService:
         except ValidationError as exc:
             ActivityService._raise_validation_error(exc)
         slot.save()
+        clear_ngo_cache()
         return slot
 
     @staticmethod
@@ -201,14 +262,18 @@ class ActivityService:
             except ValidationError as exc:
                 ActivityService._raise_validation_error(exc)
             slot.save(update_fields=list(field_updates.keys()))
+            clear_ngo_cache()
         return slot
 
     @staticmethod
     @transaction.atomic
     def deactivate_slot(slot_id):
         slot = NGOAvailability.objects.select_for_update().get(id=slot_id)
+        if ActivityService._activity_stage(slot) == "ongoing":
+            raise ValueError("Ongoing activities cannot be deactivated. Only planned activities can be removed before they start.")
         slot.is_active = False
         slot.save(update_fields=["is_active"])
+        clear_ngo_cache()
         return slot
 
     # ----------------------------------------------------

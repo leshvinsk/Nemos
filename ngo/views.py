@@ -1,25 +1,23 @@
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
-from accounts.permissions import is_administrator
+from accounts.permissions import admin_required, is_administrator
+from core.gateway_client import GatewayError, gateway_get
 from ngo.services.activity_service import ActivityService
 from registrations.models import Registration
 
 
-def _staff_only(view_func):
-    def _wrapped(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            # Delegate to login_required behavior
-            return login_required(view_func)(request, *args, **kwargs)
-        if not is_administrator(request.user):
-            return HttpResponseForbidden("Staff access required.")
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped
+def _require_internal_api_token(request):
+    configured_token = settings.INTERNAL_API_TOKEN
+    if not configured_token:
+        return False
+    provided_token = (request.headers.get("X-API-Token") or "").strip()
+    return provided_token == configured_token
 
 
 @login_required
@@ -42,15 +40,18 @@ def activity_list(request):
         },
     )
 
-@_staff_only
+@admin_required
 @require_GET
 def admin_ngo_manage(request):
-    service = ActivityService()
-    ngos = service.list_ngos_admin()
+    try:
+        ngos = gateway_get("/api/ngos/").get("results", [])
+    except GatewayError:
+        ngos = ActivityService().list_ngos_admin()
+        messages.warning(request, "Gateway unavailable. Showing direct NGO data.")
     return render(request, "ngo/admin_ngo_manage.html", {"ngos": ngos})
 
 
-@_staff_only
+@admin_required
 @require_POST
 def admin_ngo_create(request):
     service = ActivityService()
@@ -63,7 +64,7 @@ def admin_ngo_create(request):
     return redirect("ngo:admin_ngo_manage")
 
 
-@_staff_only
+@admin_required
 @require_POST
 def admin_ngo_update(request, ngo_id: int):
     service = ActivityService()
@@ -76,25 +77,34 @@ def admin_ngo_update(request, ngo_id: int):
     return redirect("ngo:admin_ngo_manage")
 
 
-@_staff_only
+@admin_required
 @require_POST
 def admin_ngo_delete(request, ngo_id: int):
     service = ActivityService()
-    service.deactivate_ngo(ngo_id)
-    messages.success(request, "NGO deactivated successfully.")
+    try:
+        service.deactivate_ngo(ngo_id)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "NGO deactivated successfully.")
     return redirect("ngo:admin_ngo_manage")
 
 
-@_staff_only
+@admin_required
 @require_GET
 def admin_activity_manage(request):
     service = ActivityService()
-    activities = service.list_slots_admin()
-    ngos = service.list_ngos_admin()
+    try:
+        activities = gateway_get("/api/ngos/activities/").get("results", [])
+        ngos = gateway_get("/api/ngos/").get("results", [])
+    except GatewayError:
+        activities = service.list_slots_admin()
+        ngos = service.list_ngos_admin()
+        messages.warning(request, "Gateway unavailable. Showing direct activity data.")
     return render(request, "ngo/admin_activity_manage.html", {"activities": activities, "ngos": ngos})
 
 
-@_staff_only
+@admin_required
 @require_POST
 def admin_activity_create(request):
     service = ActivityService()
@@ -110,7 +120,7 @@ def admin_activity_create(request):
     return redirect("ngo:admin_activity_manage")
 
 
-@_staff_only
+@admin_required
 @require_POST
 def admin_activity_update(request, activity_id: int):
     service = ActivityService()
@@ -123,10 +133,34 @@ def admin_activity_update(request, activity_id: int):
     return redirect("ngo:admin_activity_manage")
 
 
-@_staff_only
+@admin_required
 @require_POST
 def admin_activity_delete(request, activity_id: int):
     service = ActivityService()
-    service.deactivate_slot(activity_id)
-    messages.success(request, "Slot deactivated successfully.")
+    try:
+        service.deactivate_slot(activity_id)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Slot deactivated successfully.")
     return redirect("ngo:admin_activity_manage")
+
+
+@admin_required
+@require_GET
+def admin_ngo_api(request):
+    if not _require_internal_api_token(request):
+        return JsonResponse({"detail": "Valid API token required."}, status=401)
+
+    service = ActivityService()
+    payload = [
+        {
+            "id": ngo.id,
+            "name": ngo.name,
+            "description": ngo.description,
+            "contact_email": ngo.contact_email,
+            "contact_phone": ngo.contact_phone,
+        }
+        for ngo in service.list_ngos_admin()
+    ]
+    return JsonResponse({"results": payload})

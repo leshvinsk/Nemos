@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.conf import settings
 
 
 class CsrfFlowTests(TestCase):
@@ -68,3 +69,12 @@ class LoginRedirectTests(TestCase):
         response = self.client.get(reverse("accounts:login"))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("ngo:activity_list"))
+
+
+class SecuritySettingsTests(TestCase):
+    def test_session_and_cookie_security_settings_are_enabled(self):
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+        self.assertTrue(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
+        self.assertTrue(settings.SESSION_SAVE_EVERY_REQUEST)
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, "Lax")
+        self.assertEqual(settings.CSRF_COOKIE_SAMESITE, "Lax")

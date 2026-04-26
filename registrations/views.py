@@ -1,25 +1,14 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
-from accounts.permissions import is_administrator
+from accounts.permissions import admin_required, employee_required, is_administrator
+from core.gateway_client import GatewayError, gateway_get
 from registrations.services.registration_service import RegistrationService
 
 
-def _staff_only(view_func):
-    def _wrapped(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return login_required(view_func)(request, *args, **kwargs)
-        if not is_administrator(request.user):
-            return HttpResponseForbidden("Staff access required.")
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped
-
-
-@login_required
+@employee_required
 @require_http_methods(["POST"])
 def register(request, activity_id: int):
     service = RegistrationService()
@@ -31,7 +20,7 @@ def register(request, activity_id: int):
     return redirect("ngo:activity_list")
 
 
-@login_required
+@employee_required
 @require_http_methods(["POST"])
 def cancel(request, activity_id: int):
     service = RegistrationService()
@@ -43,7 +32,7 @@ def cancel(request, activity_id: int):
     return redirect("ngo:activity_list")
 
 
-@login_required
+@employee_required
 @require_GET
 def my_history(request):
     service = RegistrationService()
@@ -51,15 +40,23 @@ def my_history(request):
     return render(request, "registrations/my_history.html", {"history": history})
 
 
-@_staff_only
+@admin_required
 @require_GET
 def admin_monitor(request):
-    service = RegistrationService()
-    summary = service.monitor_summary()
+    try:
+        summary = gateway_get("/api/registrations/summary/")
+    except GatewayError:
+        service = RegistrationService()
+        summary = service.monitor_summary()
+        messages.warning(request, "Gateway unavailable. Showing direct registration summary.")
     totals = {
         "offered": summary.get("offered", 0),
         "taken": summary.get("taken", 0),
         "remaining": summary.get("remaining", 0),
     }
     rows = summary.get("rows", [])
-    return render(request, "registrations/admin_monitor.html", {"totals": totals, "rows": rows})
+    return render(
+        request,
+        "registrations/admin_monitor.html",
+        {"totals": totals, "rows": rows},
+    )

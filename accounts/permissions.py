@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth.models import Group
+from django.http import HttpResponseForbidden
 
 ADMIN_GROUP = "Administrator"
 EMPLOYEE_GROUP = "Employee"
@@ -38,3 +39,31 @@ def sync_default_user_groups(user) -> None:
 
     employee_group, _ = Group.objects.get_or_create(name=EMPLOYEE_GROUP)
     user.groups.add(employee_group)
+
+
+def employee_required(view_func):
+    def _wrapped(request, *args, **kwargs):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            from django.contrib.auth.decorators import login_required
+
+            return login_required(view_func)(request, *args, **kwargs)
+        if not is_employee(user):
+            return HttpResponseForbidden("Employee access required.")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def admin_required(view_func):
+    def _wrapped(request, *args, **kwargs):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            from django.contrib.auth.decorators import login_required
+
+            return login_required(view_func)(request, *args, **kwargs)
+        if not is_administrator(user):
+            return HttpResponseForbidden("Administrator access required.")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped

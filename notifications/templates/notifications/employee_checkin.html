@@ -1,0 +1,57 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+  <div class="mx-auto max-w-3xl">
+    <div class="rounded-3xl border border-slate-200/70 bg-white/80 p-6 shadow-soft backdrop-blur-xl sm:p-8">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Employee Check-In</p>
+      <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{{ session.activity.ngo.name }} - {{ session.activity.service_type }}</h1>
+      <p class="mt-2 text-sm/6 text-slate-600">
+        Service date: {{ session.activity.service_date|date:"Y-m-d H:i" }} at {{ session.activity.location }}
+      </p>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200/70 bg-slate-50 p-4">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Session status</p>
+          <p class="mt-2 text-lg font-semibold {% if session.is_live %}text-emerald-700{% else %}text-slate-700{% endif %}">
+            {% if session.is_live %}Live and accepting attendance{% else %}Offline until admin enables it{% endif %}
+          </p>
+        </div>
+        <div class="rounded-2xl border border-slate-200/70 bg-slate-50 p-4">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Your eligibility</p>
+          <p class="mt-2 text-lg font-semibold {% if registration_exists %}text-slate-900{% else %}text-rose-700{% endif %}">
+            {% if registration_exists %}Registered participant{% else %}Not registered for this activity{% endif %}
+          </p>
+        </div>
+      </div>
+
+      {% if not window_open %}
+        <div class="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-900">
+          Check-in is closed because the activity is not within the allowed same-day attendance window.
+        </div>
+      {% endif %}
+
+      {% if existing_record %}
+        <div class="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-900">
+          Your attendance has already been recorded at {{ existing_record.checked_in_at|date:"Y-m-d H:i:s" }}.
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'notifications:confirm_employee_checkin' session.token %}" class="mt-6">
+        {% csrf_token %}
+        <button
+          type="submit"
+          {% if not session.is_live or not registration_exists or existing_record or not window_open %}
+            disabled
+          {% endif %}
+          class="inline-flex w-full items-center justify-center rounded-2xl bg-ink-950 px-4 py-3 text-sm font-semibold text-white shadow-soft transition hover:opacity-95 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          Confirm My Attendance
+        </button>
+      </form>
+
+      <p class="mt-4 text-sm text-slate-600">
+        If the button is disabled, wait for the administrator to switch the session live or make sure you registered for the activity first.
+      </p>
+    </div>
+  </div>
+{% endblock %}

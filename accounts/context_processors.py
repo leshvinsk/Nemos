@@ -6,4 +6,6 @@ def role_context(request):
     return {
         "is_administrator": is_administrator(user),
         "is_employee": is_employee(user),
+        "session_role_name": request.session.get("role_name", ""),
+        "session_login_username": request.session.get("login_username", ""),
     }

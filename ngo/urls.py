@@ -6,6 +6,7 @@ app_name = "ngo"
 
 urlpatterns = [
     path("activities/", views.activity_list, name="activity_list"),
+    path("admin/ngos/api/", views.admin_ngo_api, name="admin_ngo_api"),
     path("admin/ngos/", views.admin_ngo_manage, name="admin_ngo_manage"),
     path("admin/ngos/create/", views.admin_ngo_create, name="admin_ngo_create"),
     path("admin/ngos/<int:ngo_id>/update/", views.admin_ngo_update, name="admin_ngo_update"),
