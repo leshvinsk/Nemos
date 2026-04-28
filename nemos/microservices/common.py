@@ -29,7 +29,7 @@ def proxy_request(request, service_name, downstream_path):
     headers = {
         key: value
         for key, value in request.headers.items()
-        if key.lower() not in {"host", "content-length"}
+        if key.lower() not in {"host", "content-length", "accept-encoding"}
     }
     response = requests.request(
         method=request.method,
